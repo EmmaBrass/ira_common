@@ -1,0 +1,9 @@
+numpy
+opencv-python==4.9.0
+matplotlib
+scipy
+face-recognition==1.3.0
+mediapipe==0.10.11
+scikit-image
+ultralytics==8.2.74
+openai

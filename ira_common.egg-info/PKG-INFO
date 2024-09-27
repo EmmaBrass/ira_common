@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: ira-common
+Version: 0.1.0
+Summary: Code for reuse amoungst all IRA projects.
+Home-page: https://github.com/yourusername/base_code
+Author: Emma Brass
+Author-email: emma@brassville.com
+Requires-Dist: numpy
+Requires-Dist: opencv-python==4.9.0
+Requires-Dist: matplotlib
+Requires-Dist: scipy
+Requires-Dist: face-recognition==1.3.0
+Requires-Dist: mediapipe==0.10.11
+Requires-Dist: scikit-image
+Requires-Dist: ultralytics==8.2.74
+Requires-Dist: openai
