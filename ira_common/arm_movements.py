@@ -79,13 +79,25 @@ class ArmMovements():
         # Go to initial position
         self.initial_position()
 
+    @property
+    def initial_image(self):
+        return self._initial_image
+
     @initial_image.setter
     def initial_image(self, image):
         self._initial_image = image
 
+    @property
+    def before_image(self):
+        return self._before_image
+
     @before_image.setter
     def before_image(self, image):
         self._before_image = image
+
+    @property
+    def after_image(self):
+        return self._after_image
 
     @after_image.setter
     def after_image(self, image):
@@ -230,7 +242,7 @@ class ArmMovements():
 
             return output_array, color_pot
 
-    def paint_marks(self, coordinates)
+    def paint_marks(self, coordinates):
         """
         Paint the marks for ira_collab.
 
@@ -516,6 +528,7 @@ class ArmMovements():
         """
         print("Doing laser drawing of face")
         self.initial_position()
+        print("Done moving to initial position.")
 
         # Map the contour coordinates into the vertical drawing space, small canvas
         offset_x, offset_y, scaling_factor = self.resize_and_center_image(
@@ -547,6 +560,8 @@ class ArmMovements():
                 new_contour.append((new_x, new_y))
             translated_large_mapped_coordinates.append(new_contour)
 
+        print("Done mapping and translating coordinates.")
+
         # Now for each contour point in small_mapped_coordinates, it will have a corresponding theta and phi.
         # We will make a new 2D array like: [[(x1a, y1a, theta1a, phi1a), (x1b,y1b,theta1b, phi1b)], [(x2a, y2a, theta2a, phi2a), (x2b,y2b,theta2b, phi2b)]]
         small_mapped_coordinates_with_angles = []
@@ -555,12 +570,15 @@ class ArmMovements():
             for small_pair, large_pair in zip(small_contour, large_contour):
                 x_small, y_small = small_pair
                 x_large, y_large = large_pair
-                delta_x = large_x - small_x
-                delta_y = large_y - small_y
-                theta = math.degrees(math.atan(delta_x/config.X_DIST)) # in degrees
-                phi = math.degrees(math.atam(delta_y/config.X_DIST)) # in degrees
+                delta_x = x_large - x_small
+                delta_y = y_large - y_small
+                theta = -(math.degrees(math.atan(delta_x/config.X_DIST))) # in degrees
+                phi = math.degrees(math.atan(delta_y/config.X_DIST)) # in degrees
                 new_contour.append((x_small, y_small, theta, phi))
             small_mapped_coordinates_with_angles.append(new_contour)
+
+        print("Done adding angles to coordinates.")
+        print("small_mapped_coordinates_with_angles: ", small_mapped_coordinates_with_angles)
 
         # Now, how can theta and phi be used in a function for the robot?
         # theta = rotation around Z axis = RZ = Yaw
@@ -581,7 +599,7 @@ class ArmMovements():
                     start_z_abs = z_abs
                     start_pitch = phi
                     start_yaw = theta
-                path.append([config.LASER_X_START, y_abs, z_abs, None, phi, theta, 50]) # TODO what is this 50?
+                path.append([config.LASER_X_START, y_abs, z_abs, None, phi, theta, 70]) # 50 is the blend radius
 
             # Move to the start of the next path
 
