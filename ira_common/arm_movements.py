@@ -2,6 +2,9 @@ from xarm.wrapper import XArmAPI #TODO install
 import cv2
 import math, random
 import ira_common.configuration as config
+from ira_common.canvas import Canvas
+from ira_common.all_marks import AllMarks
+from ira_common.mark_creator import MarkCreator
 
 class ArmMovements():
     """
@@ -16,6 +19,16 @@ class ArmMovements():
         # TODO Turn on collision detection
         # TODO set velocity
         # TODO set_mount_direction()
+
+        # initialise images for ira_collab
+        self._initial_image = None
+        self._before_image = None
+        self._after_image = None
+        # initialise variable for holding canvas object
+        self.canvas = None
+        #values for remembering previous mark types
+        self.type_id = {'blob': None, 'straight': None, 'curve': None}
+
 
         self.vertical = config.VERTICAL # If true, vertical surface. If False, horizontal
 
@@ -66,6 +79,18 @@ class ArmMovements():
         # Go to initial position
         self.initial_position()
 
+    @initial_image.setter
+    def initial_image(self, image):
+        self._initial_image = image
+
+    @before_image.setter
+    def before_image(self, image):
+        self._before_image = image
+
+    @after_image.setter
+    def after_image(self, image):
+        self._after_image = image
+
     def initial_position(self):
         """
         Move to initial position.
@@ -80,6 +105,251 @@ class ArmMovements():
         """
         self.arm.set_servo_angle(angle=[180, -48, -77.3, 0, 10.8, 0], is_radian=False, speed=self.between_speed/2, wait=True)
         print("Done moving to vert initial position")
+
+    def canvas_initialise(self):
+        """ 
+        Use with ira_collab.
+        Initialise the blank canvas.
+        """
+        if self._initial_image != None:
+            # initialise the canvas object
+            self.canvas = Canvas()
+            self.canvas.set_image(self._initial_image)
+            self.canvas.set_real_dimensions(
+                config.CANVAS_WIDTH,
+                config.CANVAS_HEIGHT
+            )
+            self.canvas.analyse()
+        else:
+            print("ERROR! No initial image.")
+
+    def look_at_canvas(self):
+        """
+        Used with ira_collab.
+        Face the eyes downwards to look at the canvas, to take a pic.
+        """
+        # TODO find good position
+
+    def lift_up(self):
+        """
+        Use with ira_collab.
+        Lift the end effector up a bit higher than initial position.
+        To give room for the human to paint unobstructed.
+        """
+        # TODO find good position.
+
+    def acknowledge(self):
+        """
+        Use with ira_collab.
+        Do a little head twist kind of thing for when the painting is complete.
+        """
+        # TODO find path.
+
+    def paint_abstract_mark(self, before_image, after_image):
+        """
+        Use with ira_collab.
+        The main meat of the system: this method takes the before and after
+        images, find the difference, then chooses how to react to the mark,
+        makes the path for the robot, and outputs it.
+
+        :param before_image: Image of the canvas before the human mark.
+        :param after_image: Image of the canvas after the human mark.
+        """
+
+        if self.canvas == None:
+            print("ERROR! No canvas object.")
+
+        if self._before_image != None:
+            before_trans = cv2.warpPerspective(
+                self._before_image,
+                self.canvas.transform_matrix,
+                (self.canvas.transformed_image_x, self.canvas.transformed_image_y)
+            )
+            # diff will be done with before and after image
+        else:
+            before_trans = cv2.warpPerspective(
+                self._initial_image,
+                self.canvas.transform_matrix,
+                (self.canvas.transformed_image_x, self.canvas.transformed_image_y)
+            )
+        after_trans = cv2.warpPerspective(
+            self._after_image,
+            self.canvas.transform_matrix,
+            (self.canvas.transformed_image_x, self.canvas.transformed_image_y)
+        )
+        # Load the transformed images into the AllMarks object, which will find all the new marks
+        all_marks = AllMarks(self.canvas)
+        all_marks.set_old_image(before_trans)
+        all_marks.set_new_image(after_trans)
+        # Find all marks, run mark type analysis, color analysis, skeletonisation, etc.
+        all_marks.find_all_marks()
+        # Get array with all the new marks in it
+        marks_array = all_marks.get_all_marks()
+
+        # If more than 1 mark was made by the human, randomly choose a 
+        # set number of marks to respond to, otherwise keep the original marks array.
+        final_marks_array = []
+        if len(marks_array) > config.NUM_MARKS:
+            final_marks_array = random.sample(marks_array, config.NUM_MARKS) # Only respond to this many marks
+        else:
+            final_marks_array = marks_array
+
+        for num, mark in enumerate(final_marks_array):
+
+            #Create a mark based on the user's mark - makes an .svg file of the next mark for the robot to make
+            if mark.type == "blob":
+                mark_creator = MarkCreator(
+                    mark, 
+                    canvas, 
+                    config.COLORS, 
+                    prev_id = self.type_id['blob']
+                    )
+            elif mark.type == "straight":
+                mark_creator = MarkCreator(
+                    mark, 
+                    canvas, 
+                    config.COLORS, 
+                    prev_id = self.type_id['straight']
+                    )
+            elif mark.type == "curve":
+                mark_creator = MarkCreator(
+                    mark, 
+                    canvas, 
+                    config.COLORS, 
+                    prev_id = self.type_id['curve']
+                    )
+            output_array = mark_creator.create()
+            color_pot = mark_creator.choose_color()
+            self.type_id[mark.type] = mark_creator.mark_type_id()
+            logger.info("type_id dictionary is now: %s", type_id)
+
+
+            # MarkCreator class will need to be edited pretty substantially to 
+            # output a path for this robot rather than an svg file I think.  
+            # TODO will have to play with the reload_brush function to get it to work with multiple colors.
+
+            return output_array, color_pot
+
+    def paint_marks(self, coordinates)
+        """
+        Paint the marks for ira_collab.
+
+        :param coordinates: 2D array of contours coordinates, in format (x,y)
+        """
+        prev_x, prev_y = 0, 0
+        y_abs = self.hor_y_start
+        x_abs = self.hor_x_start
+        # Do a first brush load
+        self.reload_brush(x_abs, y_abs, False, True)
+        for contour in mapped_coordinates:
+            if self.travelled_dist >= self.reload_dist:
+                self.reload_brush(x_abs, y_abs, False, False)
+                self.travelled_dist = 0
+            paths = []
+            current_path = []
+            start_x_abs = -1
+            start_y_abs = -1
+            for pair in contour:
+                x, y = pair
+                y_abs = self.hor_y_start+x
+                x_abs = self.hor_x_start+y
+                if start_x_abs == -1 and start_y_abs == -1:
+                    start_x_abs = x_abs
+                    start_y_abs = y_abs
+                current_path.append([x_abs, y_abs, self.hor_z_start, None, None, None, 50])
+                if prev_x != 0 and prev_y != 0:
+                    x_change = x - prev_x
+                    y_change = y - prev_y
+                else:
+                    x_change = 0
+                    y_change = 0
+                prev_x = x
+                prev_y = y
+                dist_change = math.sqrt(x_change**2+y_change**2)
+                self.travelled_dist += dist_change
+                if self.travelled_dist >= self.reload_dist:
+                    # Add current path to the paths array and start new current path
+                    paths.append(current_path)
+                    if len(current_path) >= 2:
+                        current_path = [current_path[-2], current_path[-1]] # include the last two points from prev path
+                    else:
+                        current_path = []
+                    self.travelled_dist = 0
+            # Add the last current_path to paths, if there are coordinates in it
+            if len(current_path) > 0:
+                paths.append(current_path)
+            # Move to the start of the path
+            if self.light == False:
+                # Lift up the pen
+                self.arm.set_position(
+                    x=None, 
+                    y=None, 
+                    z=self.hor_z_start+self.brush_lift, 
+                    roll=None, 
+                    pitch=None, 
+                    yaw=None, 
+                    speed=self.between_speed, 
+                    relative=False, 
+                    wait=True
+                )
+                # Correct servo 6 angle
+                self.arm.set_servo_angle(
+                    servo_id=6, 
+                    angle=0, 
+                    speed=70,
+                    is_radian=False, 
+                    wait=True
+                )
+                # Do the movement
+                self.arm.set_position(
+                    x=start_x_abs, 
+                    y=start_y_abs, 
+                    z=self.hor_z_start+self.brush_lift, 
+                    roll=None, 
+                    pitch=None, 
+                    yaw=None, 
+                    speed=self.between_speed, 
+                    relative=False, 
+                    wait=True
+                )
+                # Put the pen down
+                self.arm.set_position(
+                    x=None, 
+                    y=None, 
+                    z=self.hor_z_start, 
+                    roll=None, 
+                    pitch=None, 
+                    yaw=None, 
+                    speed=self.between_speed, 
+                    relative=False, 
+                    wait=True
+                )
+            else:
+                # Turn off the light
+                # Do the movement to next path
+                # Turn on the light
+                pass
+            
+            # Do the movement for the path(s)
+            for num, current_path in enumerate(paths):
+                self.arm.move_arc_lines(
+                    current_path, 
+                    is_radian=False, 
+                    times=1, 
+                    first_pause_time=0.1, 
+                    repeat_pause_time=0, 
+                    automatic_calibration=True, 
+                    speed=self.painting_speed, 
+                    mvacc=1500, 
+                    wait=True
+                )
+                # Do a reload between current_path and next one (if more than 1)
+                if num < len(paths)-1:
+                    self.reload_brush(current_path[-1][0], current_path[-1][1], True, False)
+            
+        # Return to initial position
+        self.initial_position()
+
 
     def straight_fw_position(self, set_speed):
         """
@@ -172,7 +442,7 @@ class ArmMovements():
 
     def resize_and_center_image(self, image_x, image_y, target_width, target_height):
         """
-        Resizes and centre image dimensions for the drawing space
+        Resize and centre image for the drawing space
         """
         image_height, image_width = image_y, image_x
         
@@ -192,6 +462,9 @@ class ArmMovements():
         return offset_x, offset_y, scaling_factor
     
     def map_coordinates(self, coordinates, offset_x, offset_y, scaling_factor):
+        """
+        Map the original coordinates into the new drawing space.
+        """
         new_coordinates = []
         for contour in coordinates:
             new_contour = []
@@ -234,9 +507,123 @@ class ArmMovements():
         
         return reordered_paths
 
+    def laser_image(self, coordinates, image_x, image_y):
+        """
+        'Draw' the image using a laser.
+        :param coordinates: 2D array of contours coordinates, in format (x,y)
+        :param image_x: x height of original image
+        :param image_y: y width of original image
+        """
+        print("Doing laser drawing of face")
+        self.initial_position()
+
+        # Map the contour coordinates into the vertical drawing space, small canvas
+        offset_x, offset_y, scaling_factor = self.resize_and_center_image(
+            image_x, 
+            image_y, 
+            config.VER_PAINT_WIDTH,
+            config.VER_PAINT_HEIGHT
+        )
+        small_mapped_coordinates = self.map_coordinates(coordinates, offset_x, offset_y, scaling_factor)
+        
+        # Map the contour coordinates onto the vertical large canvas.
+        offset_x, offset_y, scaling_factor = self.resize_and_center_image(
+            image_x, 
+            image_y, 
+            config.SURFACE_WIDTH, 
+            config.SURFACE_HEIGHT
+        )
+        large_mapped_coordinates = self.map_coordinates(coordinates, offset_x, offset_y, scaling_factor)
+
+        horizontal_translate = int((config.SURFACE_WIDTH - config.VER_PAINT_WIDTH)/2)
+        vertical_translate = int((config.SURFACE_HEIGHT - config.VER_PAINT_HEIGHT))
+        translated_large_mapped_coordinates = []
+        # Now need to change the large_mapped_coordinates to have the same origin point as small_mapped_coordinates
+        for contour in large_mapped_coordinates:
+            new_contour = []
+            for x, y in contour:
+                new_x = x - horizontal_translate
+                new_y = y - vertical_translate
+                new_contour.append((new_x, new_y))
+            translated_large_mapped_coordinates.append(new_contour)
+
+        # Now for each contour point in small_mapped_coordinates, it will have a corresponding theta and phi.
+        # We will make a new 2D array like: [[(x1a, y1a, theta1a, phi1a), (x1b,y1b,theta1b, phi1b)], [(x2a, y2a, theta2a, phi2a), (x2b,y2b,theta2b, phi2b)]]
+        small_mapped_coordinates_with_angles = []
+        for small_contour, large_contour in zip(small_mapped_coordinates, translated_large_mapped_coordinates):
+            new_contour = []
+            for small_pair, large_pair in zip(small_contour, large_contour):
+                x_small, y_small = small_pair
+                x_large, y_large = large_pair
+                delta_x = large_x - small_x
+                delta_y = large_y - small_y
+                theta = math.degrees(math.atan(delta_x/config.X_DIST)) # in degrees
+                phi = math.degrees(math.atam(delta_y/config.X_DIST)) # in degrees
+                new_contour.append((x_small, y_small, theta, phi))
+            small_mapped_coordinates_with_angles.append(new_contour)
+
+        # Now, how can theta and phi be used in a function for the robot?
+        # theta = rotation around Z axis = RZ = Yaw
+        # phi = rotation around Y axis = RY = Pitch
+
+        # Now we make the path to give to the move_arc_lines function
+        y_abs = config.LASER_Y_START
+        z_abs = config.LASER_Z_START
+        for contour in small_mapped_coordinates_with_angles:
+            path = []
+            start_y_abs = -1
+            start_z_abs = -1
+            for x, y, theta, phi in contour:
+                y_abs = config.LASER_Y_START - x
+                z_abs = config.LASER_Z_START- y
+                if start_y_abs == -1 and start_z_abs == -1:
+                    start_y_abs = y_abs
+                    start_z_abs = z_abs
+                    start_pitch = phi
+                    start_yaw = theta
+                path.append([config.LASER_X_START, y_abs, z_abs, None, phi, theta, 50]) # TODO what is this 50?
+
+            # Move to the start of the next path
+
+            # TODO Turn off the light
+            print("laser turning off")
+
+            # Do the movement to start of next path
+            self.arm.set_position(
+                x=config.LASER_X_START, 
+                y=start_y_abs, 
+                z=start_z_abs,
+                roll=config.LASER_ROLL_START, 
+                pitch=start_pitch, 
+                yaw=start_yaw, 
+                speed=self.between_speed, 
+                relative=False, 
+                wait=True
+            )
+
+            # TODO Turn on the light
+            print("laser turning on")
+
+            # Draw the line
+            self.arm.move_arc_lines(
+                path, 
+                is_radian=False, 
+                times=1, 
+                first_pause_time=0.1, 
+                repeat_pause_time=0, 
+                automatic_calibration=True, 
+                speed=self.painting_speed, 
+                mvacc=1500, 
+                wait=True
+            )
+
+        # Return to initial position
+        self.initial_position()
+
+                
     def paint_image(self, coordinates, image_x, image_y):
         """
-        Paint the image!
+        Paint the face image!
 
         :param coordinates: 2D array of contours coordinates, in format (x,y)
         :param image_x: x height of original image
@@ -248,7 +635,6 @@ class ArmMovements():
             self.initial_position()
 
             # Map the contour coordinates into the vertical drawing space
-            # Map the contour coordinates into the horizontal drawing space
             offset_x, offset_y, scaling_factor = self.resize_and_center_image(
                 image_x, 
                 image_y, 

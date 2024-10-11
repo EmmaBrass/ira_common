@@ -3,11 +3,12 @@ import requests
 
 class ImageGPT():
 
-    def __init__(self, api_key):
+    def __init__(self, api_key, collab):
         """
         Chat completions GPT for commenting on an image.
         """
         self.api_key = api_key
+        self.collab = collab
 
     def create_json(self, api_key, base64_image):
         headers = {
@@ -15,41 +16,74 @@ class ImageGPT():
             "Authorization": f"Bearer {api_key}"
             }
 
-        payload = {
-            "model": "gpt-4o-mini",
-            "messages": [
-                {
-                "role": "user",
-                "content": [
+        if self.collab == False:
+            payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
                     {
-                    "type": "text",
-                    "text": "You are a robot arm that can paint.\
-                    You love meeting humans and find them fascinating. \
-                    You only have your robot arm body and some animatronic eyes. \
-                    You secretly wish that you were a human so that you could \
-                    have a full face and body. \
-                    You are witty and sarcastically cheesy. \
-                    The image you are given is of a person in front of you. \
-                    Say hi to them and breifly comment on something about their appearence. \
-                    Comment on something unique to them, like their eye colour, clothing, \
-                    specific piece of jewellery, or glasses. \
-                    Something to help them realise that you can actually see \
-                    them and you are not just making generic comments. \
-                    Ask them to stay still whilst you gather your thoughts. \
-                    Say two to four sentences in total."
-                    },
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": "You are a robot arm that can paint.\
+                        You love meeting humans and find them fascinating. \
+                        You only have your robot arm body and some animatronic eyes. \
+                        You secretly wish that you were a human so that you could \
+                        have a full face and body. \
+                        You are witty and sarcastically cheesy. \
+                        The image you are given is of a person in front of you. \
+                        Say hi to them and breifly comment on something about their appearence. \
+                        Comment on something unique to them, like their eye colour, clothing, \
+                        specific piece of jewellery, or glasses. \
+                        Something to help them realise that you can actually see \
+                        them and you are not just making generic comments. \
+                        Ask them to stay still whilst you gather your thoughts. \
+                        Say two to four sentences in total."
+                        },
+                        {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                        }
+                    ]
+                    }
+                ],
+                "max_tokens": 300,
+                "stream": False
+            }
+        elif self.collab == True:
+            payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
                     {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}"
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": "You are a robot arm that can paint.\
+                        You love humans and find them fascinating. \
+                        You are witty and sarcastically cheesy. \
+                        The image you are given is of a paint mark that the human has just made. \
+                        Comment on the mark.  Mention specific details about its color or shape. \
+                        Pass judgement on it; say whether you like it or not. \
+                        You should mostly like it but every now and then you can not like it. \
+                        Maybe say what it reminds you of; for example, a yellow circle might \
+                        remind you of the sun. \
+                        Say two to four sentences in total."
+                        },
+                        {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                        }
+                    ]
                     }
-                    }
-                ]
-                }
-            ],
-            "max_tokens": 300,
-            "stream": False
-        }
+                ],
+                "max_tokens": 300,
+                "stream": False
+            }
 
         return headers, payload
 

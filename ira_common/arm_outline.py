@@ -1,7 +1,4 @@
 
-# Take an image and get the outline for drawing as a .svg file.
-# use xDOG to get outline
-# and then use Potrace to convert to .svg
 
 import cv2, os
 import numpy as np
