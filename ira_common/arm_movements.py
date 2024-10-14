@@ -140,7 +140,8 @@ class ArmMovements():
         Used with ira_collab.
         Face the eyes downwards to look at the canvas, to take a pic.
         """
-        # TODO find good position
+        self.arm.set_servo_angle(angle=[0, 20, -81, 0, 60, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
+        self.arm.set_servo_angle(angle=[0, 20, -81, 0, 143, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
 
     def lift_up(self):
         """
@@ -148,14 +149,20 @@ class ArmMovements():
         Lift the end effector up a bit higher than initial position.
         To give room for the human to paint unobstructed.
         """
-        # TODO find good position.
+        self.arm.set_servo_angle(angle=[0, -30, -50, 0, 82, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
+        self.arm.set_servo_angle(angle=[0, -60, -45, 0, 105, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
 
     def acknowledge(self):
         """
         Use with ira_collab.
         Do a little head twist kind of thing for when the painting is complete.
         """
-        # TODO find path.
+        self.arm.set_servo_angle(angle=[0, -30, -50, 0, 82, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
+        self.arm.set_servo_angle(angle=[0, -60, -45, 0, 105, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
+        for i in range(3):
+            self.arm.set_servo_angle(angle=[-12, -60, -45, 15, 105, -8], is_radian=False, speed=self.between_speed, relative=False, wait=True)
+            self.arm.set_servo_angle(angle=[12, -60, -45, -15, 105, 8], is_radian=False, speed=self.between_speed, relative=False, wait=True)
+        self.arm.set_servo_angle(angle=[0, -60, -45, 0, 105, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
 
     def paint_abstract_mark(self, before_image, after_image):
         """

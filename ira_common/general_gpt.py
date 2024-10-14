@@ -76,20 +76,19 @@ class GPT():
         elif collab == True:
             commands = {
                 "<startup_ready>" : "Are you ready to paint with me?  I'm looking forwards to painting with you! \
-                    Please let me know when the canvas is in position.",
+                    Please let me know when the canvas is in position by pressing enter.",
                 "<startup_pic>" : "Give me a sec to have a look at the canvas and get my bearings. \
                     Don't start painting yet.",
-                "<your_turn>" : "Your turn to paint.  Let me know when you are done by pressing any key on \
-                    the keyboard.",
+                "<your_turn>" : "Your turn to paint.  Let me know when you are done by pressing enter.",
                 "<your_turn_pic>" : "Great.  Give me a second to take a look at what you have done.",
                 "<comment>" : "You will be provided with an image of the canvas.  Call the image_analysis function.",
                 "<my_turn>" : "I am now painting you.  Comment on my love of the \
                     process of painting, and that I cannot wait for them to see the final product.",
-                "<still_my_turn>" : "I am still painting.  Comment on how it is going (don't mention colours).",    
-                "<my_turn_pic>" : "Comment on how good my work is and ask the user \
-                    what they think of it.",
-                "<ask_done>" : "",
-                "<completed>" : "" #TODO complete
+                "<still_my_turn>" : "I am still painting.  Comment on how it is going.",    
+                "<my_turn_pic>" : "Comment on my own work.  Express some emotion about it, this could be positive or negative or neutral.",
+                "<ask_done>" : "Ask the user if they think the painting is finished.",
+                "<completed>" : "Wow what a beautiful piece of art!  It's better than the famous artist x could have done \
+                    (insert some famous artist's name to replace x)."
                 # TODO need a seperate image_analysis_gpt for this robot.
             }
             gpt_instructions = f"""You are a friendly painting robot. \
@@ -106,11 +105,11 @@ class GPT():
 
         self.assistant = self.client.beta.assistants.create(
             name="Interactive Arm",
-            instructions=gpt_instructions,
+            instructions=str(gpt_instructions),
             model="gpt-4o-mini",
             tools=[
                 {"type": "function", "function": self.image_analysis_json}
-            
+            ]
         )
         self.show_json(self.assistant)
 
