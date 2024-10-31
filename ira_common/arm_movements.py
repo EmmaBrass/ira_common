@@ -131,9 +131,11 @@ class ArmMovements():
                 config.CANVAS_WIDTH,
                 config.CANVAS_HEIGHT
             )
-            self.canvas.analyse()
+            success = self.canvas.analyse()
+            return success
         else:
             print("ERROR! No initial image.")
+            return False
 
     def look_at_canvas(self):
         """
@@ -164,7 +166,7 @@ class ArmMovements():
             self.arm.set_servo_angle(angle=[12, -60, -45, -15, 105, 8], is_radian=False, speed=self.between_speed, relative=False, wait=True)
         self.arm.set_servo_angle(angle=[0, -60, -45, 0, 105, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
 
-    def paint_abstract_mark(self, before_image, after_image):
+    def paint_abstract_mark(self):
         """
         Use with ira_collab.
         The main meat of the system: this method takes the before and after
@@ -175,10 +177,10 @@ class ArmMovements():
         :param after_image: Image of the canvas after the human mark.
         """
 
-        if self.canvas == None:
+        if self.canvas is None:
             print("ERROR! No canvas object.")
 
-        if self._before_image != None:
+        if self._before_image is not None:
             before_trans = cv2.warpPerspective(
                 self._before_image,
                 self.canvas.transform_matrix,
@@ -219,32 +221,29 @@ class ArmMovements():
             if mark.type == "blob":
                 mark_creator = MarkCreator(
                     mark, 
-                    canvas, 
+                    self.canvas, 
                     config.COLORS, 
                     prev_id = self.type_id['blob']
                     )
             elif mark.type == "straight":
                 mark_creator = MarkCreator(
                     mark, 
-                    canvas, 
+                    self.canvas, 
                     config.COLORS, 
                     prev_id = self.type_id['straight']
                     )
             elif mark.type == "curve":
                 mark_creator = MarkCreator(
                     mark, 
-                    canvas, 
+                    self.canvas, 
                     config.COLORS, 
                     prev_id = self.type_id['curve']
                     )
             output_array = mark_creator.create()
             color_pot = mark_creator.choose_color()
             self.type_id[mark.type] = mark_creator.mark_type_id()
-            logger.info("type_id dictionary is now: %s", type_id)
+            print("type_id dictionary is now: %s", self.type_id)
 
-
-            # MarkCreator class will need to be edited pretty substantially to 
-            # output a path for this robot rather than an svg file I think.  
             # TODO will have to play with the reload_brush function to get it to work with multiple colors.
 
             return output_array, color_pot
@@ -260,7 +259,7 @@ class ArmMovements():
         x_abs = self.hor_x_start
         # Do a first brush load
         self.reload_brush(x_abs, y_abs, False, True)
-        for contour in mapped_coordinates:
+        for contour in coordinates:
             if self.travelled_dist >= self.reload_dist:
                 self.reload_brush(x_abs, y_abs, False, False)
                 self.travelled_dist = 0

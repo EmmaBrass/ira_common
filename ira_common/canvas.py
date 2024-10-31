@@ -29,12 +29,14 @@ class Canvas:
         self.bottom_left_corner = None
         self.bottom_right_corner = None
 
+        self.logger_level = 5
+
     def set_image(self, image):
         self.image = image
         self.image_height = image.shape[0]
-        self.logger.info("image height: %s", self.image_height)
+        print("image height: %s", self.image_height)
         self.image_width = image.shape[1]
-        self.logger.info("image width: %s", self.image_width)
+        print("image width: %s", self.image_width)
 
     def set_real_dimensions(self, width, height):
         """
@@ -48,12 +50,17 @@ class Canvas:
         self.transformed_image_y = int(self.transformed_image_x*(height/width))
 
     def analyse(self):
-        self.find_mask()
-        self.find_lines()
-        self.find_color_bgr()
-        self.find_min_max_x_y()
-        self.find_corners()
-        self.transform()
+        try:
+            self.find_mask()
+            self.find_lines()
+            self.find_color_bgr()
+            self.find_min_max_x_y()
+            self.find_corners()
+            self.transform()
+            return True  # All functions succeeded
+        except Exception as e:
+            print(f"Analysis failed: {e}")
+            return False  # An error occurred, analysis failed
 
     def find_mask(self):
         """Method to pull out the canvas as a mask."""
@@ -79,7 +86,7 @@ class Canvas:
         mask = np.zeros(self.image.shape[:2], dtype="uint8")
         # draw contours onto the mask -> thickness = -1 gives a filled-in contour.
         cv2.drawContours(mask, contours, max_area_idx, 255, thickness = -1)
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             # show the image
             cv2.imshow("mask", mask)
             cv2.waitKey(0)
@@ -98,7 +105,7 @@ class Canvas:
         # Canny edge detection
         dst = cv2.Canny(self.mask, 50, 200, None, 3)
 
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             # show the image
             cv2.imshow("Canny", dst)
             cv2.waitKey(0)
@@ -106,7 +113,7 @@ class Canvas:
         # Find lines
         linesP = cv2.HoughLinesP(dst, 1, np.pi / 180, 60, None, 100, 100)
 
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             cdst = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
             cdstP = np.copy(cdst)
             if linesP is not None:
@@ -158,8 +165,8 @@ class Canvas:
         linesH = [top_line, bottom_line]
         linesV = [left_line, right_line]
 
-        self.logger.info("linesH: %s", linesH)
-        self.logger.info("linesV: %s", linesV)
+        print("linesH: %s", linesH)
+        print("linesV: %s", linesV)
 
         # for the verticals (left and right), extend the lines to the edges of the image
         # save black images with red lines on them
@@ -182,14 +189,14 @@ class Canvas:
             if num == 0:
                 self.left_line = np.zeros(self.image.shape[:2], dtype="uint8")
                 cv2.line(self.left_line, (int(x1_ext), int(y1_ext)), (int(x2_ext), int(y2_ext)), 255, 1)
-                if self.logger.level <= 10:
+                if self.logger_level <= 10:
                     cv2.imshow("Left line", self.left_line)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
             if num == 1:
                 self.right_line = np.zeros(self.image.shape[:2], dtype="uint8")
                 cv2.line(self.right_line, (int(x1_ext), int(y1_ext)), (int(x2_ext), int(y2_ext)), 255, 1)
-                if self.logger.level <= 10:
+                if self.logger_level <= 10:
                     cv2.imshow("Right line", self.right_line)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
@@ -215,14 +222,14 @@ class Canvas:
             if num == 0:
                 self.top_line = np.zeros(self.image.shape[:2], dtype="uint8")
                 cv2.line(self.top_line, (int(x1_ext), int(y1_ext)), (int(x2_ext), int(y2_ext)), 255, 1)
-                if self.logger.level <= 10:
+                if self.logger_level <= 10:
                     cv2.imshow("Top line", self.top_line)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
             if num == 1:
                 self.bottom_line = np.zeros(self.image.shape[:2], dtype="uint8")
                 cv2.line(self.bottom_line, (int(x1_ext), int(y1_ext)), (int(x2_ext), int(y2_ext)), 255, 1)
-                if self.logger.level <= 10:
+                if self.logger_level <= 10:
                     cv2.imshow("Bottom line", self.bottom_line)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
@@ -234,13 +241,13 @@ class Canvas:
 
         # erode the mask a little to ensure we are getting the right color and no background is included
         mask = cv2.erode(self.mask, None, iterations=13)
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             cv2.imshow("Eroded mask for finding average canvas color", mask)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         # give mean color of the region in the contour
         canvas_color = cv2.mean(self.image, mask=mask)[:3]
-        self.logger.info("Average canvas color is: %s in BGR", canvas_color)
+        print("Average canvas color is: %s in BGR", canvas_color)
 
         self.color_bgr = canvas_color
         
@@ -283,7 +290,7 @@ class Canvas:
 
         # top left
         top_left = cv2.bitwise_and(self.left_line, self.top_line)
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             # Show the image to check/debug
             cv2.imshow("top_left corner", top_left)
             cv2.waitKey(0)
@@ -294,11 +301,11 @@ class Canvas:
             top_left_y_points[0]+(self.image_width/300)
         )
         self.top_left_corner = list(top_left_corner)
-        self.logger.info("top left point: %s", self.top_left_corner)
+        print("top left point: %s", self.top_left_corner)
 
         # top right
         top_right = cv2.bitwise_and(self.right_line, self.top_line)
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             # Show the image to check/debug
             cv2.imshow("top_right corner", top_right)
             cv2.waitKey(0)
@@ -309,11 +316,11 @@ class Canvas:
             top_right_y_points[0]+(self.image_width/300), 
         )
         self.top_right_corner = list(top_right_corner)
-        self.logger.info("top right point: %s", self.top_right_corner)
+        print("top right point: %s", self.top_right_corner)
 
         # bottom left
         bottom_left = cv2.bitwise_and(self.left_line, self.bottom_line)
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             # Show the image to check/debug
             cv2.imshow("bottom_left corner", bottom_left)
             cv2.waitKey(0)
@@ -324,11 +331,11 @@ class Canvas:
             bottom_left_y_points[0]-(self.image_width/300),
         )
         self.bottom_left_corner = list(bottom_left_corner)
-        self.logger.info("bottom left point: %s", self.bottom_left_corner)
+        print("bottom left point: %s", self.bottom_left_corner)
 
         # bottom right
         bottom_right = cv2.bitwise_and(self.right_line, self.bottom_line)
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             # Show the image to check/debug
             cv2.imshow("bottom_right corner", bottom_right)
             cv2.waitKey(0)
@@ -339,7 +346,7 @@ class Canvas:
             bottom_right_y_points[0]-(self.image_width/300)
         )
         self.bottom_right_corner = list(bottom_right_corner)
-        self.logger.info("bottom right point: %s", self.bottom_right_corner)
+        print("bottom right point: %s", self.bottom_right_corner)
 
     def transform(self):
         """Transform the raw image, using the found corners, 
@@ -376,7 +383,7 @@ class Canvas:
         result = cv2.warpPerspective(self.image, transformation_matrix, (self.transformed_image_x, self.transformed_image_y))
 
         # Display the transformed image
-        if self.logger.level <= 10:
+        if self.logger_level <= 10:
             cv2.imshow('Transformed Image', result)
             cv2.waitKey(0)
             cv2.destroyAllWindows()

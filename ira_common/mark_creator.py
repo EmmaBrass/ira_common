@@ -76,7 +76,7 @@ class MarkCreator():
         """ Return the id of the type of mark just created. """
         return self.id
 
-    def evaluate_quadratic_bezier(P0, P1, P2, t):
+    def evaluate_quadratic_bezier(self, P0, P1, P2, t):
         """
         Evaluate a quadratic Bezier curve at a given t value.
         :param P0: Tuple representing the start point (x, y).
@@ -89,7 +89,7 @@ class MarkCreator():
         y = (1-t)**2 * P0[1] + 2 * (1-t) * t * P1[1] + t**2 * P2[1]
         return (x, y)
 
-    def evaluate_cubic_bezier(P0, P1, P2, P3, t):
+    def evaluate_cubic_bezier(self, P0, P1, P2, P3, t):
         """
         Evaluate a cubic Bezier curve at a given t value.
         :param P0: Tuple representing the start point (x, y).
@@ -103,7 +103,7 @@ class MarkCreator():
         y = (1-t)**3 * P0[1] + 3 * (1-t)**2 * t * P1[1] + 3 * (1-t) * t**2 * P2[1] + t**3 * P3[1]
         return (x, y)
 
-    def generate_bezier_points(start, control1, end, control2=None, num_points=100):
+    def generate_bezier_points(self, start, control1, end, control2=None, num_points=100):
         """
         Generate a list of points along a quadratic or cubic Bezier curve.
         If `control2` is None, a quadratic curve is generated; otherwise, a cubic curve.
@@ -118,9 +118,9 @@ class MarkCreator():
         for i in range(num_points):
             t = i / (num_points - 1)  # Generate t values between 0 and 1
             if control2 is None:  # Quadratic Bezier curve
-                point = evaluate_quadratic_bezier(start, control1, end, t)
+                point = self.evaluate_quadratic_bezier(start, control1, end, t)
             else:  # Cubic Bezier curve
-                point = evaluate_cubic_bezier(start, control1, control2, end, t)
+                point = self.evaluate_cubic_bezier(start, control1, control2, end, t)
             points.append(point)
         return points
 
@@ -191,7 +191,7 @@ class MarkCreator():
             control2 = (curve_control2_svg[0], curve_control2_svg[1])
             end = (end2_svg[0], end2_svg[1])
             # Generate points along the Bezier curve
-            bezier_points = generate_bezier_points(start, control1, end, control2, num_points=100)
+            bezier_points = self.generate_bezier_points(start, control1, end, control2, num_points=100)
             # Append the points to the output_array
             output_array.append(bezier_points)
         if ran >= 60 and ran < 75:
@@ -360,7 +360,7 @@ class MarkCreator():
             control2 = (curve1_control2_svg[0], curve1_control2_svg[1])
             end = (curve1_svg[0], curve1_svg[1])
             # Generate points along the Bezier curve
-            bezier_points = generate_bezier_points(start, control1, end, control2, num_points=100)
+            bezier_points = self.generate_bezier_points(start, control1, end, control2, num_points=100)
             # Append the points to the output_array
             output_array.append(bezier_points)
 
@@ -369,7 +369,7 @@ class MarkCreator():
             control1 = (curve3_control2_svg[0], curve3_control2_svg[1])
             end = (end2_svg[0], end2_svg[0])
             # Generate points along the Bezier curve
-            bezier_points = generate_bezier_points(start, control1, end, None, num_points=100)
+            bezier_points = self.generate_bezier_points(start, control1, end, None, num_points=100)
             # Append the points to the output_array
             output_array.append(bezier_points)
         if ran >= 30 and ran < 50:
@@ -632,7 +632,7 @@ class MarkCreator():
             control2 = (curve1_control2_svg[0], curve1_control2_svg[1])
             end = (curve1_svg[0], curve1_svg[1])
             # Generate points along the Bezier curve
-            bezier_points = generate_bezier_points(start, control1, end, control2, num_points=100)
+            bezier_points = self.generate_bezier_points(start, control1, end, control2, num_points=100)
             # Append the points to the output_array
             output_array.append(bezier_points)
 
@@ -641,7 +641,7 @@ class MarkCreator():
             control1 = (curve3_control2_svg[0], curve3_control2_svg[1])
             end = (end2_svg[0], end2_svg[0])
             # Generate points along the Bezier curve
-            bezier_points = generate_bezier_points(start, control1, end, None, num_points=100)
+            bezier_points = self.generate_bezier_points(start, control1, end, None, num_points=100)
             # Append the points to the output_array
             output_array.append(bezier_points)
 

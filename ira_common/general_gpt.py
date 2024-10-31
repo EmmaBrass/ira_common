@@ -76,17 +76,18 @@ class GPT():
         elif collab == True:
             commands = {
                 "<startup_ready>" : "Are you ready to paint with me?  I'm looking forwards to painting with you! \
-                    Please let me know when the canvas is in position by pressing enter.",
+                    Please let me know when the canvas is in position by pressing the yes key.",
                 "<startup_pic>" : "Give me a sec to have a look at the canvas and get my bearings. \
                     Don't start painting yet.",
-                "<your_turn>" : "Your turn to paint.  Let me know when you are done by pressing enter.",
+                "<your_turn>" : "Your turn to paint.  Let me know when you are done by pressing the yes key.",
                 "<your_turn_pic>" : "Great.  Give me a second to take a look at what you have done.",
-                "<comment>" : "You will be provided with an image of the canvas.  Call the image_analysis function.",
+                "<comment>" : "You will be provided with an image of the canvas.  Call the image_analysis function.", #TODO not working !!!
                 "<my_turn>" : "I am now painting you.  Comment on my love of the \
                     process of painting, and that I cannot wait for them to see the final product.",
                 "<still_my_turn>" : "I am still painting.  Comment on how it is going.",    
                 "<my_turn_pic>" : "Comment on my own work.  Express some emotion about it, this could be positive or negative or neutral.",
-                "<ask_done>" : "Ask the user if they think the painting is finished.",
+                "<ask_done>" : "Ask the user if they think the painting is finished.  \
+                    Press the yes key if it is finished, or the no key to keep working on it.",
                 "<completed>" : "Wow what a beautiful piece of art!  It's better than the famous artist x could have done \
                     (insert some famous artist's name to replace x)."
                 # TODO need a seperate image_analysis_gpt for this robot.
