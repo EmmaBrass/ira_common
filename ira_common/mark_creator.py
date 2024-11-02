@@ -501,7 +501,7 @@ class MarkCreator():
                 ran = 90
         if ran < 10:
             self.id=1
-            print("New mark will be straight line joining ends of curve")
+            print("New mark will be straight line joining ends of curve") # TODO if the straight line is too short than do something else.
             # straight line joins the ends of the curve
             end1_x = self.mark.skel_end_points[0][1]
             end1_y = self.mark.skel_end_points[0][0]
@@ -510,9 +510,15 @@ class MarkCreator():
             # Map pixel coordinates to svg positions
             end1_svg = self.map_pixel_to_canvas(end1_x, end1_y)
             end2_svg = self.map_pixel_to_canvas(end2_x, end2_y)
-            # Add the line to the drawing as a path
-            path = [(end1_svg[0],end1_svg[1]),(end2_svg[0],end2_svg[1])]
-            output_array.append(path)
+            # Check the distance beween points (in mm)
+            # Calculate the Euclidean distance
+            distance = math.sqrt((end2_svg[0] - end1_svg[0]) ** 2 + (end2_svg[1] - end1_svg[1]) ** 2)
+            if distance < 15:
+                ran = 50 # do a curve
+            else:
+                # Add the line to the drawing as a path
+                path = [(end1_svg[0],end1_svg[1]),(end2_svg[0],end2_svg[1])]
+                output_array.append(path)
         elif ran >= 10 and ran < 40:
             self.id=2
             print("New mark will be multiple straight lines along the curve")

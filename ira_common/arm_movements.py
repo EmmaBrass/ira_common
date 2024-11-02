@@ -118,14 +118,14 @@ class ArmMovements():
         self.arm.set_servo_angle(angle=[180, -48, -77.3, 0, 10.8, 0], is_radian=False, speed=self.between_speed/2, wait=True)
         print("Done moving to vert initial position")
 
-    def canvas_initialise(self):
+    def canvas_initialise(self, debug = False):
         """ 
         Use with ira_collab.
         Initialise the blank canvas.
         """
-        if self._initial_image != None:
+        if self._initial_image is not None:
             # initialise the canvas object
-            self.canvas = Canvas()
+            self.canvas = Canvas(debug = debug)
             self.canvas.set_image(self._initial_image)
             self.canvas.set_real_dimensions(
                 config.CANVAS_WIDTH,
@@ -143,7 +143,7 @@ class ArmMovements():
         Face the eyes downwards to look at the canvas, to take a pic.
         """
         self.arm.set_servo_angle(angle=[0, 20, -81, 0, 60, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
-        self.arm.set_servo_angle(angle=[0, 20, -81, 0, 143, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
+        self.arm.set_servo_angle(angle=[-1.3, 16, -81.2, 0, 157.3, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
 
     def lift_up(self):
         """
@@ -166,7 +166,7 @@ class ArmMovements():
             self.arm.set_servo_angle(angle=[12, -60, -45, -15, 105, 8], is_radian=False, speed=self.between_speed, relative=False, wait=True)
         self.arm.set_servo_angle(angle=[0, -60, -45, 0, 105, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
 
-    def paint_abstract_mark(self):
+    def paint_abstract_mark(self, debug=True):
         """
         Use with ira_collab.
         The main meat of the system: this method takes the before and after
@@ -199,7 +199,7 @@ class ArmMovements():
             (self.canvas.transformed_image_x, self.canvas.transformed_image_y)
         )
         # Load the transformed images into the AllMarks object, which will find all the new marks
-        all_marks = AllMarks(self.canvas)
+        all_marks = AllMarks(self.canvas, debug)
         all_marks.set_old_image(before_trans)
         all_marks.set_new_image(after_trans)
         # Find all marks, run mark type analysis, color analysis, skeletonisation, etc.
@@ -242,13 +242,16 @@ class ArmMovements():
             output_array = mark_creator.create()
             color_pot = mark_creator.choose_color()
             self.type_id[mark.type] = mark_creator.mark_type_id()
-            print("type_id dictionary is now: %s", self.type_id)
+            print("type_id dictionary is now: ", self.type_id)
+
+            print("output_array: ", output_array)
+            print("color_pot: "), color_pot
 
             # TODO will have to play with the reload_brush function to get it to work with multiple colors.
 
             return output_array, color_pot
 
-    def paint_marks(self, coordinates):
+    def paint_marks(self, coordinates): # TODO use canvas depth in some way... for paint reloading I guess.
         """
         Paint the marks for ira_collab.
 

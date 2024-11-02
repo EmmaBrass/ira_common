@@ -14,7 +14,7 @@ from playsound import playsound
 # TODO Doc strings!!
 
 class GPT():
-    def __init__(self, collab=False) -> None:
+    def __init__(self, collab: bool) -> None:
         """
         GPT instance.
         
@@ -79,7 +79,7 @@ class GPT():
                     Please let me know when the canvas is in position by pressing the yes key.",
                 "<startup_pic>" : "Give me a sec to have a look at the canvas and get my bearings. \
                     Don't start painting yet.",
-                "<your_turn>" : "Your turn to paint.  Let me know when you are done by pressing the yes key.",
+                "<your_turn>" : "It is your turn to paint.  Let me know when you are done by pressing the yes key!",
                 "<your_turn_pic>" : "Great.  Give me a second to take a look at what you have done.",
                 "<comment>" : "You will be provided with an image of the canvas.  Call the image_analysis function.", #TODO not working !!!
                 "<my_turn>" : "I am now painting you.  Comment on my love of the \

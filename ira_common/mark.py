@@ -8,7 +8,7 @@ import astropy.units as u
 
 class Mark:
 
-    def __init__(self):
+    def __init__(self, debug: bool):
         self.mask = None
         self.color_rgb = None
         self.color_name = None
@@ -30,6 +30,7 @@ class Mark:
         self.skel_dy = None
         self.gradient = None
         self.type = None
+        self.debug = debug
 
     def analyse(self, new_image):
         self.find_color_rgb(new_image)
@@ -52,10 +53,10 @@ class Mark:
         mask_eroded = cv2.erode(self.mask, None, iterations=4)
         # give mean color of the region in the contour
         mark_color = cv2.mean(new_image, mask=mask_eroded)[:3]
-        self.logger.info("Average paint stroke color is: %s in BGR", mark_color)
+        print("Average paint stroke color is: %s in BGR", mark_color)
         
         self.color_rgb = [mark_color[2], mark_color[1], mark_color[0]]
-        self.logger.info("Average paint stroke color is: %s in RGB", self.color_rgb)
+        print("Average paint stroke color is: %s in RGB", self.color_rgb)
 
         return self.color_rgb
 
@@ -103,7 +104,7 @@ class Mark:
         fil.analyze_skeletons(branch_thresh=40* u.pix, skel_thresh=10 * u.pix, prune_criteria='length')
 
         skeleton_longpath = (fil.skeleton_longpath * 255).astype("uint8")
-        if self.logger.level <= 10:
+        if self.debug == True:
             cv2.imshow('skeleton_longpath', skeleton_longpath)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -127,7 +128,7 @@ class Mark:
         self.contour = contours[0]
 
         skeleton_length = (cv2.arcLength(contours[0], closed=False))/2
-        self.logger.info("Length of skeleton: %s", skeleton_length)
+        print("Length of skeleton: %s", skeleton_length)
 
         self.length = skeleton_length 
 
@@ -162,7 +163,7 @@ class Mark:
                 end_points.append(p)
 
         self.skel_end_points = end_points # as (y,x)
-        self.logger.info("End points are: %s", self.skel_end_points)
+        print("End points are: %s", self.skel_end_points)
 
         # Find dy, dx, midpoints, and gradient of the skeleton line
         dy = self.skel_end_points[1][0]-self.skel_end_points[0][0]
@@ -203,10 +204,10 @@ class Mark:
         max_y = np.max(y_coords)
         min_y = np.min(y_coords)
 
-        self.logger.info("Max x value for rect area: %s", max_x)
-        self.logger.info("Min x value for rect area: %s", min_x)
-        self.logger.info("Max y value for rect area: %s", max_y)
-        self.logger.info("Min y value for rect area: %s", min_y)
+        print("Max x value for rect area: %s", max_x)
+        print("Min x value for rect area: %s", min_x)
+        print("Max y value for rect area: %s", max_y)
+        print("Min y value for rect area: %s", min_y)
 
         self.min_x = min_x
         self.max_x = max_x
@@ -215,7 +216,7 @@ class Mark:
 
         self.rect_area = (max_x-min_x)*(max_y-min_y)
 
-        self.logger.info("Rectangular area: %s", self.rect_area)
+        print("Rectangular area: %s", self.rect_area)
 
         return self.rect_area
 
@@ -235,19 +236,19 @@ class Mark:
         shortest_side_length = min(width, height)
         # Use ratio of real area / min rect area to compare blob vs curve
         area_min_rect = width*height
-        self.logger.debug("real area / min rect area: %s", self.real_area/area_min_rect)
+        print("real area / min rect area: %s", self.real_area/area_min_rect)
         # Final decision
         if (self.length/longest_side_length > 0.8 and self.length/longest_side_length < 1.2 and
             longest_side_length/shortest_side_length > 2.5 and self.real_area/area_min_rect >= 0.7):
-            self.logger.info("The mark is straight")
+            print("The mark is straight")
             self.type = 'straight'
             return self.type
         elif self.real_area/area_min_rect >= 0.7:
-            self.logger.info("The mark is a blob")
+            print("The mark is a blob")
             self.type = 'blob'
             return self.type  
         else:
-            self.logger.info("The mark is a curve")
+            print("The mark is a curve")
             self.type = 'curve'
             return self.type
 
@@ -269,7 +270,7 @@ class Mark:
         # self.logger.debug("Type detector - key points: %s", points)
         # # if points is not empty, the mark is a curve.
         # if len(points) != 0:
-        #     self.logger.info("The mark is a curve")
+        #     print("The mark is a curve")
         #     self.type = 'curve'
         #     return self.type
         # else:
@@ -283,13 +284,13 @@ class Mark:
         # # Calculate area enclosed by convex hull
         # area = cv.contourArea(hull)
         # self.convex_hull_area = area
-        # self.logger.info("The area enclosed by the convex hull is: %s", area)
+        # print("The area enclosed by the convex hull is: %s", area)
         # # if ratio of convex hull area to length is below a threshold, then a straight line
         # if (self.convex_hull_area/self.length < 35):
-        #     self.logger.info("Straight line! Convex hull / length ratio: %s", self.convex_hull_area/self.length)
+        #     print("Straight line! Convex hull / length ratio: %s", self.convex_hull_area/self.length)
         #     self.type = 'straight'
         # else:
-        #     self.logger.info("Not a straight line! Convex hull / length ratio: %s", self.convex_hull_area/self.length)
+        #     print("Not a straight line! Convex hull / length ratio: %s", self.convex_hull_area/self.length)
         #     self.type = 'curve'
 
         # # Test if a blob
@@ -302,11 +303,11 @@ class Mark:
         # aspect_ratio = (self.max_x - self.min_x) / (self.max_y - self.min_y)
 
         # if (self.rect_area/self.real_area > 1.8):
-        #     self.logger.info("rect area / real area: %s", self.rect_area/self.real_area )
+        #     print("rect area / real area: %s", self.rect_area/self.real_area )
         # elif (aspect_ratio > 1.3 or aspect_ratio < 0.7):
-        #     self.logger.info("aspect ratio: %s", aspect_ratio)
+        #     print("aspect ratio: %s", aspect_ratio)
         # else: 
-        #     self.logger.info("rect_area/real_area is < 1.8 and aspect ratio is between 0.7 and 1.3, hence a blob!")
+        #     print("rect_area/real_area is < 1.8 and aspect ratio is between 0.7 and 1.3, hence a blob!")
         #     self.type = 'blob'
         
         # return self.type

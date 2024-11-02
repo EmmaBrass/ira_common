@@ -7,14 +7,14 @@ import skimage.morphology
 
 class AllMarks:
 
-    def __init__(self, canvas):
-        self.logger = logging.getLogger("main_logger")
+    def __init__(self, canvas, debug: bool):
         self.canvas = canvas
         self.marks_array = []
         self.all_marks_mask = None
         self.no_marks = 0
         self.old_image = None
         self.new_image = None
+        self.debug=debug
 
     def set_old_image(self, image):
         self.old_image = image
@@ -39,7 +39,7 @@ class AllMarks:
 
         # Compute SSIM between the two images
         (score, diff) = structural_similarity(self.old_image, self.new_image, channel_axis=2 ,full=True)
-        self.logger.info("Image Similarity: {:.4f}%".format(score * 100))
+        print("Image Similarity: {:.4f}%".format(score * 100))
         # TODO this needs to be made better... does NOT always work well...
 
         # The diff image contains the actual image differences between the two images
@@ -53,7 +53,7 @@ class AllMarks:
         # obtain the regions of the two input images that differ
         _, thresh = cv2.threshold(diff_gray, 150, 255, cv2.THRESH_BINARY_INV)
 
-        if self.logger.level <= 10:
+        if self.debug == True:
             # Show the image to check/debug
             cv2.imshow("thresh_after", thresh)
             cv2.waitKey(0)
@@ -64,7 +64,7 @@ class AllMarks:
         # Find all the marks in the image with areas above a given threshold
         mask_all = np.zeros(self.old_image.shape[:2], dtype="uint8")
         area_threshold = (self.canvas.transformed_image_x/15)*(self.canvas.transformed_image_y/15) 
-        self.logger.info("Min area threshold is: %s", area_threshold)
+        print("Min area threshold is: %s", area_threshold)
         contours_id = []
         for i, contour in enumerate(contours):
             area = cv2.contourArea(contour)
@@ -74,16 +74,16 @@ class AllMarks:
                 mask = np.zeros(self.old_image.shape[:2], dtype="uint8")
                 cv2.drawContours(mask, contours, i, 255, -1)
                 cv2.drawContours(mask_all, contours, i, 255, -1)
-                if self.logger.level <= 10:
+                if self.debug == True:
                     cv2.imshow(f"Mask for contour {i}", mask)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
                 contours_id.append(i)
-                mark = Mark()
+                mark = Mark(self.debug)
                 mark.real_area = area
-                self.logger.info("Area of the actual mark: %s", mark.real_area)
+                print("Area of the actual mark: %s", mark.real_area)
                 mark.min_rect_area = cv2.minAreaRect(contour)
-                self.logger.info("Min rect area: %s", mark.min_rect_area)
+                print("Min rect area: %s", mark.min_rect_area)
                 mark.mask = mask
                 mark.analyse(self.new_image)
                 self.marks_array.append(mark)

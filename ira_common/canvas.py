@@ -4,7 +4,7 @@ import math
 
 class Canvas:
 
-    def __init__(self):
+    def __init__(self, debug: bool):
         self.image = None
         self.image_height = None
         self.image_width = None
@@ -28,8 +28,8 @@ class Canvas:
         self.top_right_corner = None
         self.bottom_left_corner = None
         self.bottom_right_corner = None
+        self.debug = debug
 
-        self.logger_level = 5
 
     def set_image(self, image):
         self.image = image
@@ -86,7 +86,7 @@ class Canvas:
         mask = np.zeros(self.image.shape[:2], dtype="uint8")
         # draw contours onto the mask -> thickness = -1 gives a filled-in contour.
         cv2.drawContours(mask, contours, max_area_idx, 255, thickness = -1)
-        if self.logger_level <= 10:
+        if self.debug == True:
             # show the image
             cv2.imshow("mask", mask)
             cv2.waitKey(0)
@@ -105,7 +105,7 @@ class Canvas:
         # Canny edge detection
         dst = cv2.Canny(self.mask, 50, 200, None, 3)
 
-        if self.logger_level <= 10:
+        if self.debug == True:
             # show the image
             cv2.imshow("Canny", dst)
             cv2.waitKey(0)
@@ -113,7 +113,7 @@ class Canvas:
         # Find lines
         linesP = cv2.HoughLinesP(dst, 1, np.pi / 180, 60, None, 100, 100)
 
-        if self.logger_level <= 10:
+        if self.debug == True:
             cdst = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
             cdstP = np.copy(cdst)
             if linesP is not None:
@@ -189,14 +189,14 @@ class Canvas:
             if num == 0:
                 self.left_line = np.zeros(self.image.shape[:2], dtype="uint8")
                 cv2.line(self.left_line, (int(x1_ext), int(y1_ext)), (int(x2_ext), int(y2_ext)), 255, 1)
-                if self.logger_level <= 10:
+                if self.debug == True:
                     cv2.imshow("Left line", self.left_line)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
             if num == 1:
                 self.right_line = np.zeros(self.image.shape[:2], dtype="uint8")
                 cv2.line(self.right_line, (int(x1_ext), int(y1_ext)), (int(x2_ext), int(y2_ext)), 255, 1)
-                if self.logger_level <= 10:
+                if self.debug == True:
                     cv2.imshow("Right line", self.right_line)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
@@ -222,14 +222,14 @@ class Canvas:
             if num == 0:
                 self.top_line = np.zeros(self.image.shape[:2], dtype="uint8")
                 cv2.line(self.top_line, (int(x1_ext), int(y1_ext)), (int(x2_ext), int(y2_ext)), 255, 1)
-                if self.logger_level <= 10:
+                if self.debug == True:
                     cv2.imshow("Top line", self.top_line)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
             if num == 1:
                 self.bottom_line = np.zeros(self.image.shape[:2], dtype="uint8")
                 cv2.line(self.bottom_line, (int(x1_ext), int(y1_ext)), (int(x2_ext), int(y2_ext)), 255, 1)
-                if self.logger_level <= 10:
+                if self.debug == True:
                     cv2.imshow("Bottom line", self.bottom_line)
                     cv2.waitKey(0)
                     cv2.destroyAllWindows()
@@ -241,7 +241,7 @@ class Canvas:
 
         # erode the mask a little to ensure we are getting the right color and no background is included
         mask = cv2.erode(self.mask, None, iterations=13)
-        if self.logger_level <= 10:
+        if self.debug == True:
             cv2.imshow("Eroded mask for finding average canvas color", mask)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
@@ -274,10 +274,10 @@ class Canvas:
         y_coords, x_coords = np.where(self.right_line == 255)
         max_x = np.max(x_coords)
 
-        self.logger.debug("Max x value of canvas area: %s", max_x)
-        self.logger.debug("Min x value of canvas area: %s", min_x)
-        self.logger.debug("Max y value of canvas area: %s", max_y)
-        self.logger.debug("Min y value of canvas area: %s", min_y)
+        print("Max x value of canvas area: %s", max_x)
+        print("Min x value of canvas area: %s", min_x)
+        print("Max y value of canvas area: %s", max_y)
+        print("Min y value of canvas area: %s", min_y)
 
         # Save to the class
         self.min_x = min_x
@@ -290,7 +290,7 @@ class Canvas:
 
         # top left
         top_left = cv2.bitwise_and(self.left_line, self.top_line)
-        if self.logger_level <= 10:
+        if self.debug == True:
             # Show the image to check/debug
             cv2.imshow("top_left corner", top_left)
             cv2.waitKey(0)
@@ -305,7 +305,7 @@ class Canvas:
 
         # top right
         top_right = cv2.bitwise_and(self.right_line, self.top_line)
-        if self.logger_level <= 10:
+        if self.debug == True:
             # Show the image to check/debug
             cv2.imshow("top_right corner", top_right)
             cv2.waitKey(0)
@@ -320,7 +320,7 @@ class Canvas:
 
         # bottom left
         bottom_left = cv2.bitwise_and(self.left_line, self.bottom_line)
-        if self.logger_level <= 10:
+        if self.debug == True:
             # Show the image to check/debug
             cv2.imshow("bottom_left corner", bottom_left)
             cv2.waitKey(0)
@@ -335,7 +335,7 @@ class Canvas:
 
         # bottom right
         bottom_right = cv2.bitwise_and(self.right_line, self.bottom_line)
-        if self.logger_level <= 10:
+        if self.debug == True:
             # Show the image to check/debug
             cv2.imshow("bottom_right corner", bottom_right)
             cv2.waitKey(0)
@@ -383,7 +383,7 @@ class Canvas:
         result = cv2.warpPerspective(self.image, transformation_matrix, (self.transformed_image_x, self.transformed_image_y))
 
         # Display the transformed image
-        if self.logger_level <= 10:
+        if self.debug == True:
             cv2.imshow('Transformed Image', result)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
