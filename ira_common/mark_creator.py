@@ -1,16 +1,16 @@
-import svgwrite as sw
 import numpy as np
 import math
-import logging
 import random
 import cv2
+
+import ira_common.configuration as config
 
 class MarkCreator():
     """
     Create a .svg file for the new mark, based on the user's most recent mark.
     """
 
-    def __init__(self, mark, canvas, colors, prev_id=None):
+    def __init__(self, mark, canvas, colors, prev_id=None, debug=False):
         self.mark = mark
         self.canvas = canvas
         self.colors = colors
@@ -18,6 +18,7 @@ class MarkCreator():
         self.prev_id = prev_id
         # ID for mark being made in this turn.
         self.id = None
+        self.debug = debug
 
     def check_x(self, value):
         """Checks that the given x value is within 
@@ -47,7 +48,7 @@ class MarkCreator():
         the correct position on the svg.
         """
 
-        mapped_x_value = (x_value/self.canvas.transformed_image_x)*self.canvas.width_mm
+        mapped_x_value = self.canvas.width_mm-((x_value/self.canvas.transformed_image_x)*self.canvas.width_mm)
         mapped_y_value = (y_value/self.canvas.transformed_image_y)*self.canvas.height_mm
 
         return [mapped_x_value, mapped_y_value]
@@ -68,7 +69,7 @@ class MarkCreator():
             print("Choosing reponse mark from curve options.")
             output_array = self.curve_options()
         else: 
-            self.logger.warning("ERROR! Mark type not recognised.")
+            print("ERROR! Mark type not recognised.")
         # Return 2D array in form [[(xa1,ya1),(xa2,ya2),(xa2,ya3)],[(xb1,yb1),(xb2,yb2)]]
         return output_array
 
@@ -147,6 +148,8 @@ class MarkCreator():
             num_dots = int(self.mark.real_area/1300)
             if num_dots < 5:
                 num_dots = 5
+            if num_dots > 15:
+                num_dots = 15
             dot_len = 3
             for i in range(num_dots):
                 path = []
@@ -171,10 +174,13 @@ class MarkCreator():
             min_y = self.check_y(self.mark.min_y)
             half_y = ((max_y-min_y)/2)+min_y
             # Choose two points to be the control points
-            control1_x = self.check_x(random.randint( min_x-50, max_x+50))
-            control1_y = self.check_y(random.randint( min_y-50, max_y+50))
-            control2_x = self.check_x(random.randint( min_x-50, max_x+50))
-            control2_y = self.check_y(random.randint( min_y-50, max_y+50))
+            # Range determined by canvas size
+            range_x = config.CANVAS_WIDTH/2
+            range_y = config.CANVAS_HEIGHT/2
+            control1_x = self.check_x(random.randint( min_x-range_x, max_x+range_x))
+            control1_y = self.check_y(random.randint( min_y-range_y, max_y+range_y))
+            control2_x = self.check_x(random.randint( min_x-range_x, max_x+range_x))
+            control2_y = self.check_y(random.randint( min_y-range_y, max_y+range_y))
             # Map pixel coordinates to svg positions.
             # Choose the longest length to draw the curve across (x axis or y axis).
             if (max_x - min_x) > (max_y-min_y):
@@ -224,7 +230,7 @@ class MarkCreator():
             
             cv2.drawContours(contour_image, contours, 0, 255, 1)
 
-            if self.logger.level <= 10:
+            if self.debug == True:
                 cv2.imshow('outline of contour', contour_image)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
@@ -235,7 +241,7 @@ class MarkCreator():
 
             cv2.drawContours(contour_image, [approx], 0, 255, 1)
 
-            if self.logger.level <= 10:
+            if self.debug == True:
                 cv2.imshow('with polygon', contour_image)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
@@ -258,7 +264,7 @@ class MarkCreator():
             # Convert the contour points to integers
             contour_points = np.round(contour_points).astype(int)
 
-            if self.logger.level <= 10:
+            if self.debug == True:
                 contour_lines = np.zeros(self.mark.mask.shape[:2], dtype="uint8")
 
                 for no, point in enumerate(contour_points):
@@ -313,13 +319,13 @@ class MarkCreator():
             # Curve that joins the ends of the straight line.
             # Using cubic bezier curves.
             # Points randomly chosen within the curve bounding box.
-            self.logger.debug("before check: %s, %s, %s, %s", self.mark.min_x, self.mark.max_x, self.mark.min_y, self.mark.max_y)
+            print("before check: %s, %s, %s, %s", self.mark.min_x, self.mark.max_x, self.mark.min_y, self.mark.max_y)
             # Ensure within canvas
             self.mark.min_x = self.check_x(self.mark.min_x)
             self.mark.max_x = self.check_x(self.mark.max_x)
             self.mark.min_y = self.check_x(self.mark.min_y)
             self.mark.max_y = self.check_x(self.mark.max_y)
-            self.logger.debug("after check: %s, %s, %s, %s", self.mark.min_x, self.mark.max_x, self.mark.min_y, self.mark.max_y)
+            print("after check: %s, %s, %s, %s", self.mark.min_x, self.mark.max_x, self.mark.min_y, self.mark.max_y)
             # End points of the curve
             end1_x = self.mark.skel_end_points[0][1]
             end1_y = self.mark.skel_end_points[0][0]
@@ -591,13 +597,13 @@ class MarkCreator():
             # another curve connecting the ends of the curve together
             # using cubic bezier curves
             # points randomly chosen within the curve bounding box
-            self.logger.debug("before check: %s, %s, %s, %s", self.mark.min_x, self.mark.max_x, self.mark.min_y, self.mark.max_y)
+            print("before check: %s, %s, %s, %s", self.mark.min_x, self.mark.max_x, self.mark.min_y, self.mark.max_y)
             # Ensure within canvas
             self.mark.min_x = self.check_x(self.mark.min_x)
             self.mark.max_x = self.check_x(self.mark.max_x)
             self.mark.min_y = self.check_x(self.mark.min_y)
             self.mark.max_y = self.check_x(self.mark.max_y)
-            self.logger.debug("after check: %s, %s, %s, %s", self.mark.min_x, self.mark.max_x, self.mark.min_y, self.mark.max_y)
+            print("after check: %s, %s, %s, %s", self.mark.min_x, self.mark.max_x, self.mark.min_y, self.mark.max_y)
             # End points of the curve
             end1_x = self.mark.skel_end_points[0][1]
             end1_y = self.mark.skel_end_points[0][0]
@@ -692,18 +698,18 @@ class MarkCreator():
         # max_dist = 0
         # max_dist_pot_num = 0
         # for pot_num, robot_color in enumerate(self.colors):
-        #     self.logger.debug("Robot color for pot num %s: %s", 
+        #     print("Robot color for pot num %s: %s", 
         #         pot_num, robot_color)
         #     r_diff = human_color[2] - robot_color[0]
         #     g_diff = human_color[1] - robot_color[1]
         #     b_diff = human_color[0] - robot_color[2]
         #     overall_dist = math.sqrt((r_diff**2)+(g_diff**2)+(b_diff**2))
-        #     self.logger.debug("Overall color distance for pot no %s: %s", 
+        #     print("Overall color distance for pot no %s: %s", 
         #         pot_num, overall_dist)
         #     if overall_dist > max_dist:
         #         max_dist = overall_dist
         #         max_dist_pot_num = pot_num + 1
-        # self.logger.debug("Max dist pot num: %s", max_dist_pot_num)
+        # print("Max dist pot num: %s", max_dist_pot_num)
 
         # just choose a random color por number for now
         choice = random.randint(1,len(self.colors))

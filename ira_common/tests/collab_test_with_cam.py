@@ -17,35 +17,37 @@
 from ira_common.arm_movements import ArmMovements
 from ira_common.general_gpt import GPT
 from ira_common.camera import Camera
-import cv2
+import cv2, time
 
 
 movements = ArmMovements()
 gpt = GPT(collab=True)
 cam = Camera(port_num=4)
 
-gpt.add_user_message_and_get_response_and_speak("The command is: <startup_pic>")
+#gpt.add_user_message_and_get_response_and_speak("The command is: <startup_pic>")
 # Move arm into position
 movements.look_at_canvas()
+time.sleep(1)
 # Take picture of blank canvas
 image = cam.read()
 movements.initial_image = image
 movements.before_image = image
-movements.canvas_initialise(debug=True)
+movements.canvas_initialise(debug=False)
 # Move away
 movements.lift_up()
 # Say it's their turn to paint
-gpt.add_user_message_and_get_response_and_speak("The command is: <your_turn>")
+#gpt.add_user_message_and_get_response_and_speak("The command is: <your_turn>")
 # Wait for human input
 done = input("Press enter when done with your turn!")
 # Look at canvas, take pic, analyse
-gpt.add_user_message_and_get_response_and_speak("The command is: <your_turn_pic>")
+#gpt.add_user_message_and_get_response_and_speak("The command is: <your_turn_pic>")
 movements.look_at_canvas()
+time.sleep(1)
 image = cam.read()
 movements.after_image = image
 # Do response
 movements.initial_position()
 output_coordinates, color_pot = movements.paint_abstract_mark(debug=True)   #TODO -> choose only the mark with the LARGEST diff area? // diff on it's own needs more testing.
-movements.paint_marks(output_coordinates)
+movements.paint_marks(output_coordinates, color_pot)
 
 print("Test done!!!")

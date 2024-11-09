@@ -1,10 +1,7 @@
 from xarm.wrapper import XArmAPI #TODO install
-import cv2
 import math, random
 import ira_common.configuration as config
-from ira_common.canvas import Canvas
-from ira_common.all_marks import AllMarks
-from ira_common.mark_creator import MarkCreator
+from ira_common.canvas_analysis import CanvasAnalysis
 
 class ArmMovements():
     """
@@ -20,14 +17,12 @@ class ArmMovements():
         # TODO set velocity
         # TODO set_mount_direction()
 
+        self.canvas_analysis = CanvasAnalysis()
+
         # initialise images for ira_collab
         self._initial_image = None
         self._before_image = None
         self._after_image = None
-        # initialise variable for holding canvas object
-        self.canvas = None
-        #values for remembering previous mark types
-        self.type_id = {'blob': None, 'straight': None, 'curve': None}
 
 
         self.vertical = config.VERTICAL # If true, vertical surface. If False, horizontal
@@ -51,8 +46,8 @@ class ArmMovements():
         self.travelled_dist = 0
 
         # For paint reload pot
-        self.x_dist_reload = 200 # x distance in mm from the top-left origin corner
-        self.y_dist_reload = -50 # y distance in mm from the top-left origin corner
+        self.x_dist_reload = config.X_DIST_RELOAD # x distance in mm from the top-left origin corner
+        self.y_dist_reload = config.Y_DIST_RELOAD # y distance in mm from the top-left origin corner
 
         # For brush lifts
         self.brush_lift = 15 # the amount to lift brush off page between lines, mm
@@ -85,6 +80,7 @@ class ArmMovements():
 
     @initial_image.setter
     def initial_image(self, image):
+        self.canvas_analysis._initial_image = image
         self._initial_image = image
 
     @property
@@ -93,6 +89,7 @@ class ArmMovements():
 
     @before_image.setter
     def before_image(self, image):
+        self.canvas_analysis._before_image = image
         self._before_image = image
 
     @property
@@ -101,6 +98,7 @@ class ArmMovements():
 
     @after_image.setter
     def after_image(self, image):
+        self.canvas_analysis._after_image = image
         self._after_image = image
 
     def initial_position(self):
@@ -123,19 +121,7 @@ class ArmMovements():
         Use with ira_collab.
         Initialise the blank canvas.
         """
-        if self._initial_image is not None:
-            # initialise the canvas object
-            self.canvas = Canvas(debug = debug)
-            self.canvas.set_image(self._initial_image)
-            self.canvas.set_real_dimensions(
-                config.CANVAS_WIDTH,
-                config.CANVAS_HEIGHT
-            )
-            success = self.canvas.analyse()
-            return success
-        else:
-            print("ERROR! No initial image.")
-            return False
+        return self.canvas_analysis.canvas_initialise(debug=debug)
 
     def look_at_canvas(self):
         """
@@ -143,7 +129,7 @@ class ArmMovements():
         Face the eyes downwards to look at the canvas, to take a pic.
         """
         self.arm.set_servo_angle(angle=[0, 20, -81, 0, 60, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
-        self.arm.set_servo_angle(angle=[-1.3, 16, -81.2, 0, 157.3, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
+        self.arm.set_servo_angle(angle=[-1.3, 16, -81.2, 0, 157.2, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
 
     def lift_up(self):
         """
@@ -166,7 +152,7 @@ class ArmMovements():
             self.arm.set_servo_angle(angle=[12, -60, -45, -15, 105, 8], is_radian=False, speed=self.between_speed, relative=False, wait=True)
         self.arm.set_servo_angle(angle=[0, -60, -45, 0, 105, 0], is_radian=False, speed=self.between_speed, relative=False, wait=True)
 
-    def paint_abstract_mark(self, debug=True):
+    def paint_abstract_mark(self, debug):
         """
         Use with ira_collab.
         The main meat of the system: this method takes the before and after
@@ -177,81 +163,9 @@ class ArmMovements():
         :param after_image: Image of the canvas after the human mark.
         """
 
-        if self.canvas is None:
-            print("ERROR! No canvas object.")
+        return self.canvas_analysis.paint_abstract_mark(debug)
 
-        if self._before_image is not None:
-            before_trans = cv2.warpPerspective(
-                self._before_image,
-                self.canvas.transform_matrix,
-                (self.canvas.transformed_image_x, self.canvas.transformed_image_y)
-            )
-            # diff will be done with before and after image
-        else:
-            before_trans = cv2.warpPerspective(
-                self._initial_image,
-                self.canvas.transform_matrix,
-                (self.canvas.transformed_image_x, self.canvas.transformed_image_y)
-            )
-        after_trans = cv2.warpPerspective(
-            self._after_image,
-            self.canvas.transform_matrix,
-            (self.canvas.transformed_image_x, self.canvas.transformed_image_y)
-        )
-        # Load the transformed images into the AllMarks object, which will find all the new marks
-        all_marks = AllMarks(self.canvas, debug)
-        all_marks.set_old_image(before_trans)
-        all_marks.set_new_image(after_trans)
-        # Find all marks, run mark type analysis, color analysis, skeletonisation, etc.
-        all_marks.find_all_marks()
-        # Get array with all the new marks in it
-        marks_array = all_marks.get_all_marks()
-
-        # If more than 1 mark was made by the human, randomly choose a 
-        # set number of marks to respond to, otherwise keep the original marks array.
-        final_marks_array = []
-        if len(marks_array) > config.NUM_MARKS:
-            final_marks_array = random.sample(marks_array, config.NUM_MARKS) # Only respond to this many marks
-        else:
-            final_marks_array = marks_array
-
-        for num, mark in enumerate(final_marks_array):
-
-            #Create a mark based on the user's mark - makes an .svg file of the next mark for the robot to make
-            if mark.type == "blob":
-                mark_creator = MarkCreator(
-                    mark, 
-                    self.canvas, 
-                    config.COLORS, 
-                    prev_id = self.type_id['blob']
-                    )
-            elif mark.type == "straight":
-                mark_creator = MarkCreator(
-                    mark, 
-                    self.canvas, 
-                    config.COLORS, 
-                    prev_id = self.type_id['straight']
-                    )
-            elif mark.type == "curve":
-                mark_creator = MarkCreator(
-                    mark, 
-                    self.canvas, 
-                    config.COLORS, 
-                    prev_id = self.type_id['curve']
-                    )
-            output_array = mark_creator.create()
-            color_pot = mark_creator.choose_color()
-            self.type_id[mark.type] = mark_creator.mark_type_id()
-            print("type_id dictionary is now: ", self.type_id)
-
-            print("output_array: ", output_array)
-            print("color_pot: "), color_pot
-
-            # TODO will have to play with the reload_brush function to get it to work with multiple colors.
-
-            return output_array, color_pot
-
-    def paint_marks(self, coordinates): # TODO use canvas depth in some way... for paint reloading I guess.
+    def paint_marks(self, coordinates, color_pot):
         """
         Paint the marks for ira_collab.
 
@@ -261,7 +175,7 @@ class ArmMovements():
         y_abs = self.hor_y_start
         x_abs = self.hor_x_start
         # Do a first brush load
-        self.reload_brush(x_abs, y_abs, False, True)
+        self.reload_brush(x_abs, y_abs, False, True, color_pot)
         for contour in coordinates:
             if self.travelled_dist >= self.reload_dist:
                 self.reload_brush(x_abs, y_abs, False, False)
@@ -366,7 +280,7 @@ class ArmMovements():
                 )
                 # Do a reload between current_path and next one (if more than 1)
                 if num < len(paths)-1:
-                    self.reload_brush(current_path[-1][0], current_path[-1][1], True, False)
+                    self.reload_brush(current_path[-1][0], current_path[-1][1], True, False, color_pot)
             
         # Return to initial position
         self.initial_position()
@@ -918,7 +832,7 @@ class ArmMovements():
             self.initial_position()
 
 
-    def reload_brush(self, orig_1, orig_2, low: bool, first:bool):
+    def reload_brush(self, orig_1, orig_2, low: bool, first:bool, color_pot:int = 1):
         """
         Load the brush with more paint from reload pot.
 
@@ -926,9 +840,18 @@ class ArmMovements():
         :param orig_y: The y position to return to after the realod.
         :param low: False means stay above the page after, True means lower down so brush is touching the page.
         :param first: Whether or not this is the first brush load.
+        :param color_pot: The number of the color pot to use for reloads
         """
         print("Reloading brush")
         print("Low after?", low)
+
+        # Get x,y location of the color pot to use
+        if color_pot > config.NUM_POTS:
+            print("Color pot number given is invalid!")
+            raise KeyError
+        else:
+            color_x = self.hor_x_start + self.x_dist_reload + ((config.NUM_POTS-1)*config.POT_X_SPACING)
+            color_y = self.hor_y_start + self.y_dist_reload
         if self.vertical == True:
             if first == False:
                 # Go straight up again first if doing vertical painting
@@ -937,8 +860,8 @@ class ArmMovements():
             self.initial_position()
             # Move to paint pot
             self.arm.set_position(
-                x=self.hor_x_start+self.x_dist_reload, 
-                y=self.hor_y_start+self.y_dist_reload, 
+                x=color_x,
+                y=color_y,
                 z=self.hor_z_start+self.pot_lift, 
                 roll=None, 
                 pitch=None, 
@@ -951,7 +874,7 @@ class ArmMovements():
             self.arm.set_position(
                 x=None, 
                 y=None, 
-                z=self.hor_z_start, 
+                z=self.hor_z_start,  # TODO -canvas_depth, + pot depth
                 roll=None, 
                 pitch=None, 
                 yaw=None, 
@@ -1004,7 +927,7 @@ class ArmMovements():
                     relative=False, 
                     wait=False
                 )
-        else:
+        else: # If horizontal painting
             # Lift up brush
             self.arm.set_position(
                 x=None, 
@@ -1019,8 +942,8 @@ class ArmMovements():
             )
             # Move to paint pot
             self.arm.set_position(
-                x=self.hor_x_start+self.x_dist_reload, 
-                y=self.hor_y_start+self.y_dist_reload, 
+                x=color_x,
+                y=color_y,
                 z=None, 
                 roll=None, 
                 pitch=None, 
@@ -1033,7 +956,7 @@ class ArmMovements():
             self.arm.set_position(
                 x=None, 
                 y=None, 
-                z=self.hor_z_start, 
+                z=self.hor_z_start,  # TODO -canvas_depth, + pot depth
                 roll=None, 
                 pitch=None, 
                 yaw=None, 

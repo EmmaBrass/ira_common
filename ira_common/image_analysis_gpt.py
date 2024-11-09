@@ -38,7 +38,7 @@ class ImageGPT():
                         Something to help them realise that you can actually see \
                         them and you are not just making generic comments. \
                         Ask them to stay still whilst you gather your thoughts. \
-                        Say two to four sentences in total."
+                        Say two sentences maximum."
                         },
                         {
                         "type": "image_url",
@@ -70,7 +70,7 @@ class ImageGPT():
                         You should mostly like it but every now and then you can not like it. \
                         Maybe say what it reminds you of; for example, a yellow circle might \
                         remind you of the sun. \
-                        Say two to four sentences in total."
+                        Say two sentences maximum."
                         },
                         {
                         "type": "image_url",
